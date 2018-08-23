@@ -58,7 +58,7 @@ iotakeccak.createBundleKeccak(spam,{skipInputValidation:true,ignoreValue:false,q
 	console.log(result);
 });
 ```
-For more examples check the source of example.js which can be run as a benchmark tool as well.
+For more examples check the source of [example.js](https://github.com/SteppoFF/iota.keccak.js/blob/master/example.js) which can be run as a benchmark tool as well.
 
 ## Benchmark
 ```
