@@ -14,9 +14,9 @@ Provided functions - check source code for options:
 
 During install these two modules will be installed as well:
 
-Keccak [npm](https://www.npmjs.com/package/keccak) / [npm](https://github.com/cryptocoinjs/keccak)
+Keccak [npm](https://www.npmjs.com/package/keccak) / [github](https://github.com/cryptocoinjs/keccak)
 
-crypto-js [npm](https://www.npmjs.com/package/crypto-js) / [npm](https://github.com/brix/crypto-js)
+crypto-js [npm](https://www.npmjs.com/package/crypto-js) / [github](https://github.com/brix/crypto-js)
 
 
 ## To-do
