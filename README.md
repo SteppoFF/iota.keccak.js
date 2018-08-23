@@ -2,7 +2,7 @@
 
 **This lib is not made nor audited by the IOTA Foundation - It is community code and comes without any warranty! Do not use this library for moving big amount of funds - unless you checked the code!**
 
-This is node.js module provides a replacement for most of the kerl functions from the iota.lib.js. Can be used to build high performance spammers. I took some js files from the official iota.lib.js - thanks for this awesome peace of software!
+This node.js module provides a replacement for most of the kerl functions from the iota.lib.js. It can be used to build high performance node-js spammers but is also capable of signing inputs on value bundles. All the files in the helper folder I took from the official [iota.lib.js](https://github.com/iotaledger/iota.lib.js) and optimized them for my needs.
 
 Provided functions - check source code for options:
 - getAddressFromSeedKeccak(seed,offset,count,options)
@@ -12,7 +12,7 @@ Provided functions - check source code for options:
 - singleSignatureFragmentKeccak(curFragment, targetIndex, quick)
 - getKeyKeccak(seed, index, length, quick) 
 
-During install these two modules will be installed as well:
+During installation these two modules will be installed as well:
 
 Keccak [npm](https://www.npmjs.com/package/keccak) / [github](https://github.com/cryptocoinjs/keccak)
 
@@ -85,5 +85,3 @@ iota.keccak.js with provided address for 100 inputs: 10869ms
 iota.keccak.js quick with provided address for 100 inputs: 4767ms
 iota.lib.js for 100 provided inputs: 29722ms
 ```
-
-
