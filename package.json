@@ -1,0 +1,25 @@
+{
+    "name": "iota.keccak.js",
+    "version": "0.0.1",
+    "description": "Port of iota.lib.js kerl functions (address creation / bundle / signing) utilizing a C build of keccak and some other tweaks",
+    "main": "./iota.keccak.js",
+    "keywords": [
+        "iota",
+        "tangle"
+    ],
+    "author": {
+        "name":"SteppoFF"
+    },
+    "license": "MIT",
+    "dependencies": {
+        "crypto-js": "^3.1.9-1",
+        "keccak": "^1.4.0"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/SteppoFF/iota.keccak.js"
+    },
+    "bugs": {
+        "url": "https://github.com/SteppoFF/iota.keccak.js/issues"
+    }
+}
