@@ -1,7 +1,7 @@
 {
     "name": "iota.keccak.js",
     "version": "0.0.1",
-    "description": "Port of iota.lib.js kerl functions (address creation / bundle / signing) utilizing a C build of keccak and some other tweaks",
+    "description": "Port of iota.lib.js kerl functions (address creation / bundle / signing) utilizing a native build of keccak and some other tweaks",
     "main": "./iota.keccak.js",
     "keywords": [
         "iota",
