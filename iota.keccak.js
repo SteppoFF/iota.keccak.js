@@ -4,6 +4,9 @@ const WConverter = require("./helpers/words.js");
 const Converter = require('./helpers/converter.js');
 const tritAdd = require("./helpers/adder.js");
 const inputValidator = require("./helpers/inputValidator.js");
+const CURL = require("./helpers/curl.js");
+
+/******** KERL FUNCTIONS ********/
 
 var getAddressFromSeedKeccak = function(seed,offset,count,options){
     if(typeof(options)==="undefined"){
@@ -484,9 +487,9 @@ var getKeyKeccak = function(seed, index, length, quick) {
     return key;
 }
 
-var addChecksumKeccak = function(inputValue, checksumLength,) {
+var addChecksumKeccak = function(inputValue, checksumLength) {
     // checksum length is either user defined, or 9 trytes
-    var checksumLength = checksumLength || 9;
+    checksumLength = checksumLength || 9;
     var isSingleInput = inputValidator.isString(inputValue);
     // If only single address, turn it into an array
     if (isSingleInput) inputValue = new Array( inputValue );
@@ -503,6 +506,254 @@ var addChecksumKeccak = function(inputValue, checksumLength,) {
     return (isSingleInput?inputsWithChecksum[0]:inputsWithChecksum);
 }
 
+/******** CURL FUNCTIONS ********/
+
+/**
+*   Converts transaction trytes of 2673 trytes into a transaction object
+*
+*   @method transactionObject
+*   @param {string} trytes
+*   @param {string} transactionHash
+*   @returns {String} transactionObject
+**/
+var transactionObject = function(trytes) {
+    if(/^[A-Z9]{2673}$/.test(trytes)!==true) return false;
+    // validity check
+    if(/^[A-Z9]{16}$/.test(trytes.slice(2279,2295))!==true) return false;
+    var thisTransaction = {};
+    var transactionTrits = Converter.trits(trytes);
+    thisTransaction.hash = getTXHash(trytes);
+    thisTransaction.signatureMessageFragment = trytes.slice(0, 2187);
+    thisTransaction.address = trytes.slice(2187, 2268);
+    thisTransaction.value = Converter.value(transactionTrits.slice(6804, 6837));
+    thisTransaction.obsoleteTag = trytes.slice(2295, 2322);
+    thisTransaction.timestamp = Converter.value(transactionTrits.slice(6966, 6993));
+    thisTransaction.currentIndex = Converter.value(transactionTrits.slice(6993, 7020));
+    thisTransaction.lastIndex = Converter.value(transactionTrits.slice(7020, 7047));
+    thisTransaction.bundle = trytes.slice(2349, 2430);
+    thisTransaction.trunkTransaction = trytes.slice(2430, 2511);
+    thisTransaction.branchTransaction = trytes.slice(2511, 2592);
+    thisTransaction.tag = trytes.slice(2592, 2619);
+    thisTransaction.attachmentTimestamp = Converter.value(transactionTrits.slice(7857, 7884));
+    thisTransaction.attachmentTimestampLowerBound = Converter.value(transactionTrits.slice(7884, 7911));
+    thisTransaction.attachmentTimestampUpperBound = Converter.value(transactionTrits.slice(7911, 7938));
+    thisTransaction.nonce = trytes.slice(2646, 2673);
+    return thisTransaction;
+}
+
+var getTXHash = function(trytes){
+    if(/^[A-Z9]{2673}$/.test(trytes)!==true) return false;
+    var curl=new CURL();
+    curl.initialize();
+    // trytes is 2673 trytes long - means 8019 trits
+    curl.absorb(Converter.trits(trytes),0,8019);
+    return Converter.trytes(curl.getState(0,243));
+}
+
+/**
+*   Pure JS Proof of Work implementation.. well, just for reference as it is way too slow
+*   returns nonce in case we found it or false if not or on invalid input
+*   :trollface:
+**/
+var doPoW = function(trytes, maxrounds, mwm) {
+  return new Promise((resolve, reject) => {
+    if(!mwm) mwm=15;
+    if(/^[A-Z9]{2673}$/.test(trytes)!==true || maxrounds < 1 || mwm < 1){
+        resolve(false);
+        return;    
+    }
+    var curl=new CURL(),
+        rounds = 0,
+        stateCopy = [],
+        trits = Converter.trits(trytes);
+    // lets go
+    curl.initialize();
+    // trytes is 2673 trytes long - means 8019 trits = 33*HASH_LENGTH (243)
+    // we can absorb the first 32 rounds
+    curl.absorb(trits.slice(0,7776),0,7776);
+    trits=trits.slice(-243);
+    // save the state
+    stateCopy=curl.getState();
+    // now we have the state we need - lets start the work
+    for (; rounds < maxrounds; rounds++) {
+        // absorb the latest
+        curl.absorb(trits,0,243);
+        //check the trits
+        if(curl.checkMwM(mwm)){
+            // we have a valid nonce
+            resolve(Converter.trytes(trits.slice(-81)));
+            return;
+        }
+        // increase the nonce
+        trits.splice(162,81,...tritAdd(trits.slice(-81), [1]));
+        // reset the state
+        curl.initialize(stateCopy);
+    }
+    resolve(false);
+  });  
+}
+
+/******** NET FUNCTIONS ********/
+
+var storeTransactions = function(node,trytes){
+    return new Promise((resolve, reject) => {
+        var data=[];
+        if(!inputValidator.isArray(trytes)){
+            data.push(trytes);
+        } else {
+            data=trytes;
+        }
+        resolve(performHttp(node,{
+            command: "storeTransactions",
+            trytes: data}));
+    });
+}
+
+var attachToTangle = function(node,trunkTransaction,branchTransaction,minWeightMagnitude,trytes){
+    return new Promise((resolve, reject) => {
+        var data=[];
+        if(!inputValidator.isArray(trytes)){
+            data.push(trytes);
+        } else {
+            data=trytes;
+        }
+        resolve(performHttp(node,{
+            command: "attachToTangle",
+            trunkTransaction: trunkTransaction,
+            branchTransaction: branchTransaction,
+            minWeightMagnitude: minWeightMagnitude,
+            trytes: data}));      
+    });
+}
+
+var broadcastTransactions = function(node,trytes){
+    return new Promise((resolve, reject) => {
+        var data=[];
+        if(!inputValidator.isArray(trytes)){
+            data.push(trytes);
+        } else {
+            data=trytes;
+        }
+        resolve(performHttp(node,{
+            command: "broadcastTransactions",
+            trytes: data}));      
+    });
+}
+var getTransactionsToApprove = function(node,depth,reference){
+    return new Promise((resolve, reject) => {
+        var payload={
+            command: "getTransactionsToApprove",
+            depth: depth};
+        if(reference.length==81){
+            payload.reference=reference;
+        }
+        resolve(performHttp(node,payload));      
+    });
+}
+
+var getNodeInfo = function(node){
+    return new Promise((resolve, reject) => {
+        var payload={
+            command: "getNodeInfo"};
+        resolve(performHttp(node,payload));      
+    });
+}
+
+var storeAndBroadcast = function(node,trytes){
+    return new Promise((resolve, reject) => {
+        var data=[];
+        if(!inputValidator.isArray(trytes)){
+            data.push(trytes);
+        } else {
+            data=trytes;
+        }
+        storeTransactions(node,data)
+        .then(function(){
+              resolve(broadcastTransactions(node,data));      
+        })
+    });
+}
+
+var connectHttp=function(node){
+    var tmp=[];
+    if(typeof(node.host)!=="undefined"){
+        var tmp=[node.schema,node.host,node.port];
+    } else if(typeof(node.url)!=="undefined"){
+        var tmp=node.url.split(":");
+    } else {
+        var tmp=node.split(":");
+    }
+    var target=require(tmp[0]=='https'?'https':'http');
+    target.globalAgent.keepAlive = true;
+    target.globalAgent.options.keepAlive = true;
+    return target;
+}
+
+var performHttp = function(node,payload){
+    return new Promise((resolve, reject) => {
+        var data="";
+        if(typeof(node.host)!=="undefined"){
+            var tmp=[node.schema,node.host,node.port];
+        } else if(typeof(node.url)!=="undefined"){
+            var tmp=node.url.split(":");
+        } else {
+            var tmp=node.split(":");
+        }  
+        if(!node.con){
+            var con=require(tmp[0]=='https'?'https':'http');
+        } else {
+            var con=node.con;
+        }
+        var options = {
+          hostname: trimChar(tmp[1],"/"),
+          port: tmp[2],
+          path: '/',
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+              'X-IOTA-API-Version': '1',
+          }
+        };
+        var req = con.request(options, function(res) {
+          res.setEncoding('utf8');
+          res.on('data', function (body) {
+             data+=body;
+          });
+          res.on('end', function () {
+            if(data.slice(-1)!=="}"){
+                console.log("Error on Node:"+tmp[0]+"://"+tmp[1]+":"+tmp[2]);
+                console.log(data);
+                resolve(false);
+                return;
+            }
+            body=JSON.parse(data);
+            if(typeof(body)==="undefined"){
+                resolve(false);
+            } else {
+                resolve(body);              
+            }
+          });
+        });
+        req.on('error', function(err) {
+            console.log(err);
+            resolve(false);
+        });
+        // write data to request body
+        req.write(JSON.stringify(payload));
+        req.end();
+    });
+}
+
+/******** HELPER FUNCTIONS ********/
+function trimChar(string, charToRemove) {
+    while(string.charAt(0)==charToRemove) {
+        string = string.substring(1);
+    }
+    while(string.charAt(string.length-1)==charToRemove) {
+        string = string.substring(0,string.length-1);
+    }
+    return string;
+}
 
 function chunkArray(array,size){
     var temparray=[];
@@ -606,5 +857,13 @@ module.exports = {
     createBundleHashKeccak:createBundleHashKeccak,
     getAddressKeccak:getAddressKeccak,
     singleSignatureFragmentKeccak:singleSignatureFragmentKeccak,
-    getKeyKeccak:getKeyKeccak
+    getKeyKeccak:getKeyKeccak,
+    getTXHash:getTXHash,
+    doPoW:doPoW,
+    connectHttp:connectHttp,
+    transactionObject:transactionObject,
+    storeAndBroadcast:storeAndBroadcast,
+    attachToTangle:attachToTangle,
+    getTransactionsToApprove:getTransactionsToApprove,
+    getNodeInfo:getNodeInfo
 }
