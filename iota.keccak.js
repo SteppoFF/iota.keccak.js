@@ -550,6 +550,116 @@ var getTXHash = function(trytes){
     return Converter.trytes(curl.getState(0,243));
 }
 
+var getCOOSigAddress = function(curlMode, hash, signature){
+    /*
+     * curlMode is the round used in curl - currently 27
+     * hash is the trunkTransaction of the first tx aka tx-hash of second tx
+     * signature is the signatureMessageFragment of the first tx
+     * 
+     * -> calculates digest and returns the address
+     */
+    // prepare the data normalize hash and convert signature to trits
+    var normalizedHash = normalizedBundleFromTrits(Converter.trits(hash),3), signatureFragment = Converter.trits(signature);
+    var curl = new CURL(curlMode), jCurl = new CURL(curlMode);
+    var buffer=[];
+    curl.initialize();
+    jCurl.initialize();
+    // calculate digest 
+    for (var i = 0; i < 27; i++) {
+        buffer = signatureFragment.slice(i * 243, (i + 1) * 243);
+        for (var j = normalizedHash[i] + 13; j-- > 0; ) {
+            jCurl.reset();  
+            jCurl.absorb(buffer, 0, buffer.length);
+            buffer=jCurl.getState(0,CURL.HASH_LENGTH);
+        }
+        curl.absorb(buffer, 0, buffer.length);
+    }
+    buffer=curl.getState(0,CURL.HASH_LENGTH);
+    // calculate the address
+    curl.reset();
+    curl.absorb(buffer, 0, buffer.length);
+    return curl.getState(0,CURL.HASH_LENGTH);
+}
+
+var getMerkleRoot = function(curlMode, hash, signature, milestoneIndex, size) {
+    /*
+     * curlMode is the round used in curl - currently 27
+     * hash the calulated address of first TX signatureMessageFragment
+     * signature is the signatureMessageFragment of the sexond tx
+     * milestoneIndex is the milestonIndex of the first tx (obsoleteTag converted to value)
+     * size is the number of keys in milestone - currently 20 on mainnet and 22 on testnet
+     * 
+     * -> calculates an address -> should match COO address
+     */
+    var curl = new CURL(curlMode);
+    curl.initialize();
+    for (var i = 0; i < size; i++) {
+        curl.reset();
+        if ((milestoneIndex & 1) == 0) {
+            curl.absorb(hash, 0, hash.length);
+            curl.absorb(signature, i * CURL.HASH_LENGTH, CURL.HASH_LENGTH);
+        } else {
+            curl.absorb(signature, i * CURL.HASH_LENGTH, CURL.HASH_LENGTH);
+            curl.absorb(hash, 0, hash.length);
+        }
+        hash=curl.getState(0,hash.length);
+        milestoneIndex >>= 1;
+    }
+    return Converter.trytes(hash);
+}
+
+var validateMilestone = function(transactionTrytes,cooAddress,curlMode,milestoneKeyNum){
+    /*
+     * transactionTrytes - array -> provide the transaction trytes (should be two) of the milestone
+     * cooAddress - current COO address - mainnet currently: KPWCHICGJZXKE9GSUDXZYUAPLHAKAHYHDXNPHENTERYMMBQOPSQIDENXKLKCEYCPVTZQLEEJVYJZV9BWU
+     * curlMode - is the round used in curl - currently 27
+     * milestoneKeyNum - is the number of keys in milestone - currently 20 on mainnet and 22 on testnet
+     */
+    return new Promise((resolve, reject) => {
+        // milestone index
+        if(!cooAddress) cooAddress="KPWCHICGJZXKE9GSUDXZYUAPLHAKAHYHDXNPHENTERYMMBQOPSQIDENXKLKCEYCPVTZQLEEJVYJZV9BWU";
+        if(!curlMode) curlMode=27;
+        if(!milestoneKeyNum) milestoneKeyNum=20;        
+        var firstTX=transactionObject(transactionTrytes[0]);
+        var secondTX=transactionObject(transactionTrytes[1]);
+        var milestoneIndex=Converter.value(Converter.trits(firstTX.obsoleteTag));
+        // to some validation
+        if(firstTX.address!==cooAddress){
+            resolve({valid:false,data:{firstTX:firstTX,secondTX:secondTX},err:"TX address not COO address"});
+        } else if(firstTX.lastIndex!==1||firstTX.currentIndex!==0){
+            resolve({valid:false,data:{firstTX:firstTX,secondTX:secondTX},err:"Invalid COO bundle"});
+        } else if(milestoneIndex<0||milestoneIndex>2097152) {
+            resolve({valid:false,data:{firstTX:firstTX,secondTX:secondTX},err:"Invalid milestone id"}); 
+        } else {
+            // a milestone always has two tx -> validate trunk
+            // perform some vildations
+            if(firstTX.branchTransaction!==secondTX.trunkTransaction){
+               resolve({valid:false,data:{firstTX:firstTX,secondTX:secondTX},err:"Branch/Trunk not matching"}); 
+            } else if(secondTX.lastIndex!==1||secondTX.currentIndex!==1){
+               resolve({valid:false,data:{firstTX:firstTX,secondTX:secondTX},err:"Second TX not matching"}); 
+            } else if(firstTX.bundle!==secondTX.bundle){
+               resolve({valid:false,data:{firstTX:firstTX,secondTX:secondTX},err:"Bundle not matching"});  
+            } else {
+                // Create address and validate
+                if(getMerkleRoot(
+                        curlMode,
+                        getCOOSigAddress(
+                            curlMode,
+                            firstTX.trunkTransaction,
+                            firstTX.signatureMessageFragment
+                          ),
+                        Converter.trits(secondTX.signatureMessageFragment),
+                        milestoneIndex,
+                        milestoneKeyNum)==cooAddress){
+                    resolve({valid:true,data:{firstTX:firstTX,secondTX:secondTX,milestoneIndex:milestoneIndex},err:false}); 
+                } else {
+                   resolve({valid:false,data:{firstTX:firstTX,secondTX:secondTX},err:"COO address missmatch"});  
+                }
+            }
+        }
+    })
+}
+
 /**
 *   Pure JS Proof of Work implementation.. well, just for reference as it is way too slow
 *   returns nonce in case we found it or false if not or on invalid input
@@ -639,13 +749,16 @@ var broadcastTransactions = function(node,trytes){
             trytes: data}));      
     });
 }
+
 var getTransactionsToApprove = function(node,depth,reference){
     return new Promise((resolve, reject) => {
         var payload={
             command: "getTransactionsToApprove",
             depth: depth};
-        if(reference.length==81){
-            payload.reference=reference;
+        if(reference){
+            if(reference.length==81){
+                payload.reference=reference;
+            }
         }
         resolve(performHttp(node,payload));      
     });
@@ -677,11 +790,11 @@ var storeAndBroadcast = function(node,trytes){
 var connectHttp=function(node){
     var tmp=[];
     if(typeof(node.host)!=="undefined"){
-        var tmp=[node.schema,node.host,node.port];
+        tmp=[node.schema,node.host,node.port];
     } else if(typeof(node.url)!=="undefined"){
-        var tmp=node.url.split(":");
+        tmp=node.url.split(":");
     } else {
-        var tmp=node.split(":");
+        tmp=node.split(":");
     }
     var target=require(tmp[0]=='https'?'https':'http');
     target.globalAgent.keepAlive = true;
@@ -692,12 +805,13 @@ var connectHttp=function(node){
 var performHttp = function(node,payload){
     return new Promise((resolve, reject) => {
         var data="";
+        var tmp=[];
         if(typeof(node.host)!=="undefined"){
-            var tmp=[node.schema,node.host,node.port];
+            tmp=[node.schema,node.host,node.port];
         } else if(typeof(node.url)!=="undefined"){
-            var tmp=node.url.split(":");
+            tmp=node.url.split(":");
         } else {
-            var tmp=node.split(":");
+            tmp=node.split(":");
         }  
         if(!node.con){
             var con=require(tmp[0]=='https'?'https':'http');
@@ -860,8 +974,9 @@ module.exports = {
     getKeyKeccak:getKeyKeccak,
     getTXHash:getTXHash,
     doPoW:doPoW,
-    connectHttp:connectHttp,
     transactionObject:transactionObject,
+    validateMilestone:validateMilestone,
+    connectHttp:connectHttp,
     storeAndBroadcast:storeAndBroadcast,
     attachToTangle:attachToTangle,
     getTransactionsToApprove:getTransactionsToApprove,
