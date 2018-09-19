@@ -85,7 +85,9 @@ function createSpam(spam,node){
     then(function(result){
         if(result!==true){
             for (var i = 0, max = toSend.length; i < max; i++) {
-                console.log(getPrintableTime()+" - TX sent:"+iotakeccak.getTXHash(toSend[i]));
+                // console.log(getPrintableTime()+" - TX sent:"+iotakeccak.getTXHash(toSend[i]));
+                // save ~10 ms and use bundle hash instead
+                console.log(getPrintableTime()+" - TX sent - Bundle:"+toSend[i].slice(2349, 2430));
                 counter++;
             }
             toSend=[];
