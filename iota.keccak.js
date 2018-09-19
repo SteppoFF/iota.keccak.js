@@ -549,6 +549,53 @@ var transactionObject = function(trytes) {
     return thisTransaction;
 }
 
+var transactionTrytes = function(transaction) {
+    var valueTrits = Converter.trits(transaction.value);
+    while (valueTrits.length < 81) {
+        valueTrits[valueTrits.length] = 0;
+    }
+    var timestampTrits = Converter.trits(transaction.timestamp);
+    while (timestampTrits.length < 27) {
+        timestampTrits[timestampTrits.length] = 0;
+    }
+    var currentIndexTrits = Converter.trits(transaction.currentIndex);
+    while (currentIndexTrits.length < 27) {
+        currentIndexTrits[currentIndexTrits.length] = 0;
+    }
+    var lastIndexTrits = Converter.trits(transaction.lastIndex);
+    while (lastIndexTrits.length < 27) {
+        lastIndexTrits[lastIndexTrits.length] = 0;
+    }
+    var attachmentTimestampTrits = Converter.trits(transaction.attachmentTimestamp || 0);
+    while (attachmentTimestampTrits.length < 27) {
+        attachmentTimestampTrits[attachmentTimestampTrits.length] = 0;
+    }
+    var attachmentTimestampLowerBoundTrits = Converter.trits(transaction.attachmentTimestampLowerBound || 0);
+    while (attachmentTimestampLowerBoundTrits.length < 27) {
+        attachmentTimestampLowerBoundTrits[attachmentTimestampLowerBoundTrits.length] = 0;
+    }
+    var attachmentTimestampUpperBoundTrits = Converter.trits(transaction.attachmentTimestampUpperBound || 0);
+    while (attachmentTimestampUpperBoundTrits.length < 27) {
+        attachmentTimestampUpperBoundTrits[attachmentTimestampUpperBoundTrits.length] = 0;
+    }
+    transaction.tag = transaction.tag || transaction.obsoleteTag;
+    return transaction.signatureMessageFragment
+    + transaction.address
+    + Converter.trytes(valueTrits)
+    + transaction.obsoleteTag
+    + Converter.trytes(timestampTrits)
+    + Converter.trytes(currentIndexTrits)
+    + Converter.trytes(lastIndexTrits)
+    + transaction.bundle
+    + transaction.trunkTransaction
+    + transaction.branchTransaction
+    + transaction.tag
+    + Converter.trytes(attachmentTimestampTrits)
+    + Converter.trytes(attachmentTimestampLowerBoundTrits)
+    + Converter.trytes(attachmentTimestampUpperBoundTrits)
+    + transaction.nonce;
+}
+
 var getTXHash = function(trytes){
     if(/^[A-Z9]{2673}$/.test(trytes)!==true) return false;
     var curl=new CURL();
@@ -941,52 +988,7 @@ function getAverage(val){
     return Math.round(sum/val.length);
 }
 
-function transactionTrytes(transaction) {
-    var valueTrits = Converter.trits(transaction.value);
-    while (valueTrits.length < 81) {
-        valueTrits[valueTrits.length] = 0;
-    }
-    var timestampTrits = Converter.trits(transaction.timestamp);
-    while (timestampTrits.length < 27) {
-        timestampTrits[timestampTrits.length] = 0;
-    }
-    var currentIndexTrits = Converter.trits(transaction.currentIndex);
-    while (currentIndexTrits.length < 27) {
-        currentIndexTrits[currentIndexTrits.length] = 0;
-    }
-    var lastIndexTrits = Converter.trits(transaction.lastIndex);
-    while (lastIndexTrits.length < 27) {
-        lastIndexTrits[lastIndexTrits.length] = 0;
-    }
-    var attachmentTimestampTrits = Converter.trits(transaction.attachmentTimestamp || 0);
-    while (attachmentTimestampTrits.length < 27) {
-        attachmentTimestampTrits[attachmentTimestampTrits.length] = 0;
-    }
-    var attachmentTimestampLowerBoundTrits = Converter.trits(transaction.attachmentTimestampLowerBound || 0);
-    while (attachmentTimestampLowerBoundTrits.length < 27) {
-        attachmentTimestampLowerBoundTrits[attachmentTimestampLowerBoundTrits.length] = 0;
-    }
-    var attachmentTimestampUpperBoundTrits = Converter.trits(transaction.attachmentTimestampUpperBound || 0);
-    while (attachmentTimestampUpperBoundTrits.length < 27) {
-        attachmentTimestampUpperBoundTrits[attachmentTimestampUpperBoundTrits.length] = 0;
-    }
-    transaction.tag = transaction.tag || transaction.obsoleteTag;
-    return transaction.signatureMessageFragment
-    + transaction.address
-    + Converter.trytes(valueTrits)
-    + transaction.obsoleteTag
-    + Converter.trytes(timestampTrits)
-    + Converter.trytes(currentIndexTrits)
-    + Converter.trytes(lastIndexTrits)
-    + transaction.bundle
-    + transaction.trunkTransaction
-    + transaction.branchTransaction
-    + transaction.tag
-    + Converter.trytes(attachmentTimestampTrits)
-    + Converter.trytes(attachmentTimestampLowerBoundTrits)
-    + Converter.trytes(attachmentTimestampUpperBoundTrits)
-    + transaction.nonce;
-}
+
 
 function normalizedBundleFromTrits(bundleHashTrits,seclevel) {
     var normalizedBundle = [];
@@ -1029,6 +1031,7 @@ module.exports = {
     doPoWPureJS:doPoWPureJS,
     doPoW:doPoW,
     transactionObject:transactionObject,
+    transactionTrytes:transactionTrytes,
     validateMilestone:validateMilestone,
     connectHttp:connectHttp,
     storeAndBroadcast:storeAndBroadcast,

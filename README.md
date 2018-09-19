@@ -2,22 +2,36 @@
 
 **This lib is not made nor audited by the IOTA Foundation - It is community code and comes without any warranty! Do not use this library for moving big amount of funds - unless you checked the code!**
 
-This node.js module provides a replacement for most of the kerl functions from the iota.lib.js. It can be used to build high performance node-js spammers but is also capable of signing inputs on value bundles. All the files in the helper folder I took from the official [iota.lib.js](https://github.com/iotaledger/iota.lib.js) and optimized them for my needs.
+This node.js module provides a replacement for most of the kerl, curl and net functions from the iota.lib.js. It can be used to build high performance node-js spammers but is also capable of signing inputs on value bundles. All the files in the helper folder I took from the official [iota.lib.js](https://github.com/iotaledger/iota.lib.js) and optimized them for my needs. Using a smart implementation and remote PoW, this script is easily capable of performing 100 TPS - IRI is the bottleneck here.
 
 Provided functions - check source code for options:
-- getAddressFromSeedKeccak(seed,offset,count,options)
-- createBundleKeccak(bundles,options)
-- createBundleHashKeccakfunction(bundle, maxSecLevel)
-- getAddressKeccak(normalizedBundleHash, signatureFragments, quick)
-- singleSignatureFragmentKeccak(curFragment, targetIndex, quick)
-- getKeyKeccak(seed, index, length, quick) 
+- getAddressFromSeedKeccak(seed,offset,count,options) - kerl function to create addresses
+- createBundleKeccak(bundles,options) - kerl function to create bundles
+- createBundleHashKeccakfunction(bundle, maxSecLevel) - kerl function to create the bunde hash
+- getAddressKeccak(normalizedBundleHash, signatureFragments, quick) - kerl function get the address
+- singleSignatureFragmentKeccak(curFragment, targetIndex, quick) - kerl signing function
+- getKeyKeccak(seed, index, length, quick) - kerl function to get the key fragment from seed
+- getTXHash(trytes) - curl function get the tx hash
+- doPoWPureJS(trytes, maxrounds, mwm) - pure JS implementation of PoW (more an easter egg as it is way too slow)
+- doPoW(trytes,trunkTransaction,branchTransaction,minWeightMagnitude) - requires the ffi version and ccurl (check source code and [local spammer example](https://github.com/SteppoFF/iota.keccak.js/tree/master/examples/local_spammer.js) for more info!)
+- transactionObject(transactionTrytes) - transforms trytes into a transaction object
+- transactionTrytes(transaction) - transforms a transaction object back into its trytes
+- validateMilestone(transactionTrytes,cooAddress,curlMode,milestoneKeyNum) - validates milestone transactions
+- connectHttp(node) - will enable the keep-alive feature for network functions (!the node needs to support it!)
+- storeAndBroadcast(node,trytes) - chaining of store and broadcast command to publish transactions
+- attachToTangle(node,trunkTransaction,branchTransaction,minWeightMagnitude,trytes) - remote PoW
+- getTransactionsToApprove(node,depth,reference) - the regular gtta call
+- getNodeInfo(node) - perform a getNodeInfo call
 
-During installation these two modules will be installed as well:
+During installation at least these two modules will be installed as well (slim):
 
 Keccak [npm](https://www.npmjs.com/package/keccak) / [github](https://github.com/cryptocoinjs/keccak)
 
 crypto-js [npm](https://www.npmjs.com/package/crypto-js) / [github](https://github.com/brix/crypto-js)
 
+If you install the full version with local PoW support (master):
+
+ffi [npm](https://www.npmjs.com/package/ffi) / [github](https://github.com/node-ffi/node-ffi)
 
 ## To-do
 
@@ -28,9 +42,15 @@ crypto-js [npm](https://www.npmjs.com/package/crypto-js) / [github](https://gith
 ## Quickstart: 
 
 ### Install:
- 1. Move to the `nodes_module` folder of your project
- 2. Clone via git `git clone https://github.com/SteppoFF/iota.keccak.js` **or** download repository as zip and extract
- 3. move to the directory and install using `npm install`
+If you want to use the local PoW, please user the master
+ npm install git+https://github.com/SteppoFF/iota.keccak.js/#master
+ **OR**
+If you just want to have the kerl/curl/net functions, you can go with the slim version
+ npm install git+https://github.com/SteppoFF/iota.keccak.js/#slim
+
+### Using local PoW
+In order to use local PoW with the master branch, the libccurl lib must be present in the folder
+where the final script is started from. Please check the [local spammer example](https://github.com/SteppoFF/iota.keccak.js/tree/master/examples/local_spammer.js) for more info.
 
 ### Usage:
 Generating addresses
@@ -58,9 +78,10 @@ iotakeccak.createBundleKeccak(spam,{skipInputValidation:true,ignoreValue:false,q
 	console.log(result);
 });
 ```
-For more examples check the source of [example.js](https://github.com/SteppoFF/iota.keccak.js/blob/master/example.js) which can be run as a benchmark tool as well.
+For more examples check the [expamples folder](https://github.com/SteppoFF/iota.keccak.js/tree/master/examples).
+You will find several examples there how to use this module
 
-## Benchmark
+## Benchmark for address creation and signing
 ```
 Seed set to: IBYMRX......
 
