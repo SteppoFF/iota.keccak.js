@@ -2,6 +2,8 @@
 
 **This lib is not made nor audited by the IOTA Foundation - It is community code and comes without any warranty! Do not use this library for moving big amount of funds - unless you checked the code!**
 
+**There are not many input checks! Please be aware of this fact while using this module!**
+
 This node.js module provides a replacement for most of the kerl, curl and net functions from the iota.lib.js. It can be used to build high performance node-js spammers but is also capable of signing inputs on value bundles. All the files in the helper folder I took from the official [iota.lib.js](https://github.com/iotaledger/iota.lib.js) and optimized them for my needs. Using a smart implementation and remote PoW, this script is easily capable of performing 100 TPS - IRI is the bottleneck here.
 
 Provided functions - check source code for options:
@@ -29,7 +31,7 @@ Keccak [npm](https://www.npmjs.com/package/keccak) / [github](https://github.com
 
 crypto-js [npm](https://www.npmjs.com/package/crypto-js) / [github](https://github.com/brix/crypto-js)
 
-If you install the full version with local PoW support (master):
+If you install the full version with local PoW support (master) this module will be installed as well:
 
 ffi [npm](https://www.npmjs.com/package/ffi) / [github](https://github.com/node-ffi/node-ffi)
 
@@ -42,11 +44,11 @@ ffi [npm](https://www.npmjs.com/package/ffi) / [github](https://github.com/node-
 ## Quickstart: 
 
 ### Install:
-If you want to use the local PoW, please user the master
+If you want to use the local PoW, please use the master branch
 
 <pre><code>npm install git+https://github.com/SteppoFF/iota.keccak.js/#master</code></pre>
  **OR**
-If you just want to have the kerl/curl/net functions, you can go with the slim version
+If you just want to have the kerl/curl/net functions, you can go with the slim branch
 
 <pre><code>npm install git+https://github.com/SteppoFF/iota.keccak.js/#slim</code></pre>
 
@@ -81,7 +83,7 @@ iotakeccak.createBundleKeccak(spam,{skipInputValidation:true,ignoreValue:false,q
 });
 ```
 For more examples check the [expamples folder](https://github.com/SteppoFF/iota.keccak.js/tree/master/examples).
-You will find several examples there how to use this module
+You will find several examples there how to use this module.
 
 ## Benchmark for address creation and signing
 ```
