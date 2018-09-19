@@ -43,10 +43,12 @@ ffi [npm](https://www.npmjs.com/package/ffi) / [github](https://github.com/node-
 
 ### Install:
 If you want to use the local PoW, please user the master
- npm install git+https://github.com/SteppoFF/iota.keccak.js/#master
+
+<pre><code>npm install git+https://github.com/SteppoFF/iota.keccak.js/#master</code></pre>
  **OR**
 If you just want to have the kerl/curl/net functions, you can go with the slim version
- npm install git+https://github.com/SteppoFF/iota.keccak.js/#slim
+
+<pre><code>npm install git+https://github.com/SteppoFF/iota.keccak.js/#slim</code></pre>
 
 ### Using local PoW
 In order to use local PoW with the master branch, the libccurl lib must be present in the folder
