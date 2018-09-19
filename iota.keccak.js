@@ -5,7 +5,15 @@ const Converter = require('./helpers/converter.js');
 const tritAdd = require("./helpers/adder.js");
 const inputValidator = require("./helpers/inputValidator.js");
 const CURL = require("./helpers/curl.js");
+var libccurl=false;
 
+try {
+    libccurl = require('ffi').Library("./libccurl", {
+        ccurl_pow : [ 'string', [ 'string', 'int'] ]
+    });
+} catch(error){
+    // not present, but who cares as long as local pow is not used -> will be catched there
+}
 /******** KERL FUNCTIONS ********/
 
 var getAddressFromSeedKeccak = function(seed,offset,count,options){
@@ -552,9 +560,9 @@ var getTXHash = function(trytes){
 
 var getCOOSigAddress = function(curlMode, hash, signature){
     /*
-     * curlMode is the round used in curl - currently 27
-     * hash is the trunkTransaction of the first tx aka tx-hash of second tx
-     * signature is the signatureMessageFragment of the first tx
+     * curlMode - is the round used in curl - currently 27
+     * hash - is the trunkTransaction of the first tx aka tx-hash of second tx
+     * signature - is the signatureMessageFragment of the first tx
      * 
      * -> calculates digest and returns the address
      */
@@ -583,11 +591,11 @@ var getCOOSigAddress = function(curlMode, hash, signature){
 
 var getMerkleRoot = function(curlMode, hash, signature, milestoneIndex, size) {
     /*
-     * curlMode is the round used in curl - currently 27
-     * hash the calulated address of first TX signatureMessageFragment
-     * signature is the signatureMessageFragment of the sexond tx
-     * milestoneIndex is the milestonIndex of the first tx (obsoleteTag converted to value)
-     * size is the number of keys in milestone - currently 20 on mainnet and 22 on testnet
+     * curlMode - is the round used in curl - currently 27
+     * hash - is the calulated address of first TX signatureMessageFragment
+     * signature - is the signatureMessageFragment of the sexond tx
+     * milestoneIndex - is the milestonIndex of the first tx (obsoleteTag converted to value)
+     * size - is the number of keys in milestone - currently 20 on mainnet and 22 on testnet
      * 
      * -> calculates an address -> should match COO address
      */
@@ -612,7 +620,7 @@ var validateMilestone = function(transactionTrytes,cooAddress,curlMode,milestone
     /*
      * transactionTrytes - array -> provide the transaction trytes (should be two) of the milestone
      * cooAddress - current COO address - mainnet currently: KPWCHICGJZXKE9GSUDXZYUAPLHAKAHYHDXNPHENTERYMMBQOPSQIDENXKLKCEYCPVTZQLEEJVYJZV9BWU
-     * curlMode - is the round used in curl - currently 27
+     * curlMode - is the rounds used in curl - currently 27
      * milestoneKeyNum - is the number of keys in milestone - currently 20 on mainnet and 22 on testnet
      */
     return new Promise((resolve, reject) => {
@@ -661,11 +669,11 @@ var validateMilestone = function(transactionTrytes,cooAddress,curlMode,milestone
 }
 
 /**
-*   Pure JS Proof of Work implementation.. well, just for reference as it is way too slow
+*   Pure JS proof of work implementation.. well, just for reference as it is way too slow
 *   returns nonce in case we found it or false if not or on invalid input
 *   :trollface:
 **/
-var doPoW = function(trytes, maxrounds, mwm) {
+var doPoWPureJS = function(trytes, maxrounds, mwm) {
   return new Promise((resolve, reject) => {
     if(!mwm) mwm=15;
     if(/^[A-Z9]{2673}$/.test(trytes)!==true || maxrounds < 1 || mwm < 1){
@@ -688,7 +696,7 @@ var doPoW = function(trytes, maxrounds, mwm) {
     for (; rounds < maxrounds; rounds++) {
         // absorb the latest
         curl.absorb(trits,0,243);
-        //check the trits
+        // check the trits
         if(curl.checkMwM(mwm)){
             // we have a valid nonce
             resolve(Converter.trytes(trits.slice(-81)));
@@ -703,6 +711,51 @@ var doPoW = function(trytes, maxrounds, mwm) {
   });  
 }
 
+/**
+*   Proof of work implementation using ffi
+*   !!!-> libccurl needs to be present in the folder where the script got started from
+**/
+var doPoW=function(trytes,trunkTransaction,branchTransaction,minWeightMagnitude){
+  return new Promise((resolve, reject) => {
+    if(libccurl===false){
+        resolve({success:false,error:"CCurl not reachable - Please fix this prior calling this function!"});
+        return;
+    }
+    var reversedTrytes=trytes,
+        curTrunk=trunkTransaction.slice(),
+        curBranch=branchTransaction.slice(),
+        response=[],
+        i=0;
+    function loop() {
+        var txObject = transactionObject(reversedTrytes[i]);
+        txObject.trunkTransaction = curTrunk;
+        txObject.branchTransaction = curBranch;
+        txObject.attachmentTimestamp = Date.now();
+        txObject.attachmentTimestampLowerBound = 0;
+        txObject.attachmentTimestampUpperBound = (Math.pow(3,27) - 1) / 2;
+        libccurl.ccurl_pow.async(transactionTrytes(txObject), minWeightMagnitude, function(error, returnedTrytes) {
+            if (error) {
+                resolve({success:false,error:error});
+            } else if (returnedTrytes.length<2673) {
+                resolve({success:false,trytes:returnedTrytes});
+            } else {
+                response.push(returnedTrytes.slice(0,2673));
+                i++;
+                if (i < reversedTrytes.length) {
+                    if(i==1){
+                       curBranch=curTrunk.slice();
+                    }
+                    curTrunk=getTXHash(returnedTrytes.slice(0,2673));
+                    loop();
+                } else {
+                    resolve({success:true,trytes:response});
+                }     
+            }
+        });
+    }
+    loop();
+  });
+}
 /******** NET FUNCTIONS ********/
 
 var storeTransactions = function(node,trytes){
@@ -973,6 +1026,7 @@ module.exports = {
     singleSignatureFragmentKeccak:singleSignatureFragmentKeccak,
     getKeyKeccak:getKeyKeccak,
     getTXHash:getTXHash,
+    doPoWPureJS:doPoWPureJS,
     doPoW:doPoW,
     transactionObject:transactionObject,
     validateMilestone:validateMilestone,
