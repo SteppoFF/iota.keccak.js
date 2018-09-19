@@ -4,7 +4,7 @@
 
 **There are not many input checks! Please be aware of this fact while using this module!**
 
-This node.js module provides a replacement for most of the kerl, curl and net functions from the iota.lib.js. It can be used to build high performance node-js spammers but is also capable of signing inputs on value bundles. All the files in the helper folder I took from the official [iota.lib.js](https://github.com/iotaledger/iota.lib.js) and optimized them for my needs. Using a smart implementation and remote PoW, this script is easily capable of performing 100 TPS - IRI is the bottleneck here.
+This node.js module provides a replacement for most of the kerl, curl and net functions from the iota.lib.js. It can be used to build high performance node-js spammers but is also capable of signing inputs for value bundles. All the files in the helper folder I took from the official [iota.lib.js](https://github.com/iotaledger/iota.lib.js) and optimized them for my needs. Using a smart implementation and remote PoW, this script is easily capable of performing > 100 TPS - IRI is the bottleneck here.
 
 Provided functions - check source code for options:
 - getAddressFromSeedKeccak(seed,offset,count,options) - kerl function to create addresses
@@ -48,13 +48,14 @@ If you want to use the local PoW, please use the master branch
 
 <pre><code>npm install git+https://github.com/SteppoFF/iota.keccak.js/#master</code></pre>
  **OR**
+ 
 If you just want to have the kerl/curl/net functions, you can go with the slim branch
 
 <pre><code>npm install git+https://github.com/SteppoFF/iota.keccak.js/#slim</code></pre>
 
 ### Using local PoW
 In order to use local PoW with the master branch, the libccurl lib must be present in the folder
-where the final script is started from. Please check the [local spammer example](https://github.com/SteppoFF/iota.keccak.js/tree/master/examples/local_spammer.js) for more info.
+where the final script is started from. Please check the [local spammer example](https://github.com/SteppoFF/iota.keccak.js/tree/master/examples/local_spammer.js) for more information.
 
 ### Usage:
 Generating addresses
@@ -110,3 +111,11 @@ iota.keccak.js with provided address for 100 inputs: 10869ms
 iota.keccak.js quick with provided address for 100 inputs: 4767ms
 iota.lib.js for 100 provided inputs: 29722ms
 ```
+
+## Donations
+This tool is **completely free**..
+If you wish to donate anyhow, feel free to send IOTA to:
+
+`KYDDREOOQZDXYJPGMHUQADIBHKMKFYDPFJNOCZHZE9ZBZZIZKBYTTPPLAWAMEWMOHKLNJDUYVHMQMBGXXCRKOANBDC`
+
+![Donation Address](https://chart.googleapis.com/chart?chs=250x250&cht=qr&chl=KYDDREOOQZDXYJPGMHUQADIBHKMKFYDPFJNOCZHZE9ZBZZIZKBYTTPPLAWAMEWMOHKLNJDUYVHMQMBGXXCRKOANBDC)
