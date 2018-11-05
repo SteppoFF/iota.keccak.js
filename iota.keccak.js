@@ -419,6 +419,7 @@ var getAddressKeccak = function(normalizedBundleHash, signatureFragments, quick)
 }
 
 var singleSignatureFragmentKeccak = function(curFragment, targetIndex, quick) {
+    if(targetIndex==13){return curFragment}
     var sha3 = new SHA3('keccak384'),
         hash = Buffer.from(CryptoJS.lib.WordArray.create(WConverter.trits_to_words(Converter.trits(curFragment))).toString(),'hex'),
         tmp = Buffer;
