@@ -1035,6 +1035,8 @@ module.exports = {
     transactionTrytes:transactionTrytes,
     validateMilestone:validateMilestone,
     connectHttp:connectHttp,
+    storeTransactions:storeTransactions,
+    broadcastTransactions:broadcastTransactions,
     storeAndBroadcast:storeAndBroadcast,
     attachToTangle:attachToTangle,
     getTransactionsToApprove:getTransactionsToApprove,
