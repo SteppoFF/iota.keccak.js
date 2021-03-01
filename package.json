@@ -14,8 +14,7 @@
     "dependencies": {
         "crypto-js": "^4.0.0",
         "keccak": "^3.0.1",
-        "blakejs": "^1.1.0",
-        "ffi": "^2.3.0"
+        "blakejs": "^1.1.0"
     },
     "repository": {
         "type": "git",
