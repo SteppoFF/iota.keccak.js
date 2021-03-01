@@ -4,9 +4,10 @@
 
 **There are not many input checks! Please be aware of this fact while using this module!**
 
-This node.js module provides a replacement for most of the kerl, curl and net functions from the iota.lib.js. It can be used to build high performance node-js spammers but is also capable of signing inputs for value bundles. All the files in the helper folder I took from the official [iota.lib.js](https://github.com/iotaledger/iota.lib.js) and optimized them for my needs. Using a smart implementation and remote PoW, this script is easily capable of performing > 100 TPS - IRI is the bottleneck here.
+This node.js module provides a replacement for most of the kerl, curl and net functions from the iota.lib.js. It can be used to build tools and/or high performance node-js spammers but is also capable of signing inputs for value bundles. All the files in the helper folder I took from the official [iota.lib.js](https://github.com/iotaledger/iota.lib.js) and optimized them for my needs. Using a smart implementation and remote PoW, this script is easily capable of performing > 100 TPS - IRI is the bottleneck here.
 
 Provided functions - check source code for options:
+- convertTransferAddress(address,options) - will create the corresponding transfer address of an Ed25519 address  (check source code and [transfer address example](https://github.com/SteppoFF/iota.keccak.js/tree/master/examples/transfer_address.js) for more info)
 - getAddressFromSeedKeccak(seed,offset,count,options) - kerl function to create addresses
 - createBundleKeccak(bundles,options) - kerl function to create bundles
 - createBundleHashKeccakfunction(bundle, maxSecLevel) - kerl function to create the bunde hash
@@ -22,14 +23,18 @@ Provided functions - check source code for options:
 - connectHttp(node) - will enable the keep-alive feature for network functions (!the node needs to support it!)
 - storeAndBroadcast(node,trytes) - chaining of store and broadcast command to publish transactions
 - attachToTangle(node,trunkTransaction,branchTransaction,minWeightMagnitude,trytes) - remote PoW
-- getTransactionsToApprove(node,depth,reference) - the regular gtta call
-- getNodeInfo(node) - perform a getNodeInfo call
+- getTransactionsToApprove(node,depth,reference) - the regular getTransactionsToApprove call towards the node
+- getBalances(node,addresses) - the regular getBalances call towards the node
+- wereAddressesSpentFrom(node,addresses) - the regular wereAddressesSpentFrom call towards the node
+- getNodeInfo(node) - perform a getNodeInfo call towards the node
 
-During installation at least these two modules will be installed as well (slim):
+During installation at least these three modules will be installed as well (slim):
 
 Keccak [npm](https://www.npmjs.com/package/keccak) / [github](https://github.com/cryptocoinjs/keccak)
 
 crypto-js [npm](https://www.npmjs.com/package/crypto-js) / [github](https://github.com/brix/crypto-js)
+
+blakejs [npm](https://www.npmjs.com/package/blakejs) / [github](https://github.com/dcposch/blakejs)
 
 If you install the full version with local PoW support (master) this module will be installed as well:
 
