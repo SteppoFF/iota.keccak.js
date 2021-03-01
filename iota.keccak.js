@@ -1,5 +1,6 @@
 const CryptoJS = require("crypto-js");
 const SHA3 = require('keccak');
+const blake = require('blakejs')
 const WConverter = require("./helpers/words.js");
 const Converter = require('./helpers/converter.js');
 const tritAdd = require("./helpers/adder.js");
@@ -14,8 +15,27 @@ try {
 } catch(error){
     // not present, but who cares as long as local pow is not used -> will be catched there
 }
-/******** KERL FUNCTIONS ********/
+/******** TRANSFER RELATED FUNCTIONS - RIP ********/
+var convertTransferAddress = function(address,options){
+    // Will create the 81-tryte transfer address of an Ed25519 address
+    if(typeof(options)==="undefined"){
+        options = {}
+    }
+    if(typeof(options.addChecksum)==="undefined"){
+        // should we add checksum to the address - will return 90 instead of 81 trytes
+        options.addChecksum=false;
+    }
+    let data=mergeTypedArrays(Int8Array.from(Buffer.from(address, 'hex')),blake.blake2b(Buffer.from(address, 'hex'),null,32).slice(0,4));
+    let ret="TRANSFER";
+    data.forEach(element => ret+=Converter.trytes(padArray(Converter.fromValue(element), 6, 0)));
+    ret=(ret+'9'.repeat(81)).slice(0,81);
+    if(options.addChecksum===true){
+        ret=addChecksumKeccak(ret, 9, true); 
+    }
+    return ret;
+};
 
+/******** KERL FUNCTIONS ********/
 var getAddressFromSeedKeccak = function(seed,offset,count,options){
     if(typeof(options)==="undefined"){
         options = {}
@@ -29,7 +49,7 @@ var getAddressFromSeedKeccak = function(seed,offset,count,options){
         options.quick=false;
     }
     if(typeof(options.addChecksum)==="undefined"){
-        // make it quicker using an experimental version of the converter with certain breakpoints
+        // should we add checksum to the address - will return 90 instead of 81 trytes
         options.addChecksum=false;
     }
     var seedTrits=Converter.trits(seed);
@@ -43,12 +63,12 @@ var getAddressFromSeedKeccak = function(seed,offset,count,options){
        ret=addChecksumKeccak(ret, 9, true); 
     }
     return ret;
-}
+};
 
 var createBundleKeccak = function(bundles,options){
     return new Promise((resolve, reject) => {
         if(typeof(options)==="undefined"){
-            options = {}
+            options = {};
         }
         if(typeof(options.skipInputValidation)==="undefined"){
             // skip the input validation - if you code your stuff properly: go for it
@@ -309,7 +329,7 @@ var createBundleKeccak = function(bundles,options){
             resolve({success:true,bundle:bundle.reverse(),info:{timings:timings}});
         });
     });
-}
+};
 
 var createBundleHashKeccak = function(bundle, maxSecLevel){
     return new Promise((resolve, reject) => {
@@ -370,11 +390,11 @@ var createBundleHashKeccak = function(bundle, maxSecLevel){
                     tagtrits=tritAdd(tagtrits, [1]);
                 }
             }
-            bundle[(bundle.length-1)].obsoleteTag=Converter.trytes(tagtrits)
+            bundle[(bundle.length-1)].obsoleteTag=Converter.trytes(tagtrits);
             resolve({success:true,hash:Converter.trytes(hash)});
         }
     });    
-}
+};
        
 var getAddressKeccak = function(normalizedBundleHash, signatureFragments, quick){
     if(normalizedBundleHash===null){
@@ -416,10 +436,10 @@ var getAddressKeccak = function(normalizedBundleHash, signatureFragments, quick)
         bSha3.update(Buffer.from(CryptoJS.lib.WordArray.create(WConverter.trits_to_words(Array.from(WConverter.words_to_trits(CryptoJS.enc.Base64.parse(Buffer.from(aSha3.digest(), "binary").toString('base64')).words)))).toString(),'hex'));
     }
     return Converter.trytes((Array.from(WConverter.words_to_trits(CryptoJS.enc.Base64.parse(Buffer.from(bSha3.digest(), "binary").toString('base64')).words))));
-}
+};
 
 var singleSignatureFragmentKeccak = function(curFragment, targetIndex, quick) {
-    if(targetIndex==13){return curFragment}
+    if(targetIndex===13){return curFragment;}
     var sha3 = new SHA3('keccak384'),
         hash = Buffer.from(CryptoJS.lib.WordArray.create(WConverter.trits_to_words(Converter.trits(curFragment))).toString(),'hex'),
         tmp = Buffer;
@@ -446,7 +466,7 @@ var singleSignatureFragmentKeccak = function(curFragment, targetIndex, quick) {
         }
     }
     return Converter.trytes((Array.from(WConverter.words_to_trits(CryptoJS.enc.Base64.parse(Buffer.from(sha3.digest(), "binary").toString('base64')).words))));
-}
+};
 
 var getKeyKeccak = function(seed, index, length, quick) {
     var sha3 = new SHA3('keccak384'),
@@ -494,7 +514,7 @@ var getKeyKeccak = function(seed, index, length, quick) {
         }
     }
     return key;
-}
+};
 
 var addChecksumKeccak = function(inputValue, checksumLength) {
     // checksum length is either user defined, or 9 trytes
@@ -513,7 +533,7 @@ var addChecksumKeccak = function(inputValue, checksumLength) {
         inputsWithChecksum.push( thisValue + Converter.trytes((Array.from(WConverter.words_to_trits(CryptoJS.enc.Base64.parse(Buffer.from(sha3.digest(), "binary").toString('base64')).words)))).substring( 81 - checksumLength, 81 ));
     });
     return (isSingleInput?inputsWithChecksum[0]:inputsWithChecksum);
-}
+};
 
 /******** CURL FUNCTIONS ********/
 
@@ -548,7 +568,7 @@ var transactionObject = function(trytes) {
     thisTransaction.attachmentTimestampUpperBound = Converter.value(transactionTrits.slice(7911, 7938));
     thisTransaction.nonce = trytes.slice(2646, 2673);
     return thisTransaction;
-}
+};
 
 var transactionTrytes = function(transaction) {
     var valueTrits = Converter.trits(transaction.value);
@@ -595,7 +615,7 @@ var transactionTrytes = function(transaction) {
     + Converter.trytes(attachmentTimestampLowerBoundTrits)
     + Converter.trytes(attachmentTimestampUpperBoundTrits)
     + transaction.nonce;
-}
+};
 
 var getTXHash = function(trytes){
     if(/^[A-Z9]{2673}$/.test(trytes)!==true) return false;
@@ -604,7 +624,7 @@ var getTXHash = function(trytes){
     // trytes is 2673 trytes long - means 8019 trits
     curl.absorb(Converter.trits(trytes),0,8019);
     return Converter.trytes(curl.getState(0,243));
-}
+};
 
 var getCOOSigAddress = function(curlMode, hash, signature){
     /*
@@ -635,7 +655,7 @@ var getCOOSigAddress = function(curlMode, hash, signature){
     curl.reset();
     curl.absorb(buffer, 0, buffer.length);
     return curl.getState(0,CURL.HASH_LENGTH);
-}
+};
 
 var getMerkleRoot = function(curlMode, hash, signature, milestoneIndex, size) {
     /*
@@ -662,7 +682,7 @@ var getMerkleRoot = function(curlMode, hash, signature, milestoneIndex, size) {
         milestoneIndex >>= 1;
     }
     return Converter.trytes(hash);
-}
+};
 
 var validateMilestone = function(transactionTrytes,cooAddress,curlMode,milestoneKeyNum){
     /*
@@ -713,8 +733,8 @@ var validateMilestone = function(transactionTrytes,cooAddress,curlMode,milestone
                 }
             }
         }
-    })
-}
+    });
+};
 
 /**
 *   Pure JS proof of work implementation.. well, just for reference as it is way too slow
@@ -757,7 +777,7 @@ var doPoWPureJS = function(trytes, maxrounds, mwm) {
     }
     resolve(false);
   });  
-}
+};
 
 /**
 *   Proof of work implementation using ffi
@@ -790,7 +810,7 @@ var doPoW=function(trytes,trunkTransaction,branchTransaction,minWeightMagnitude)
                 response.push(returnedTrytes.slice(0,2673));
                 i++;
                 if (i < reversedTrytes.length) {
-                    if(i==1){
+                    if(i===1){
                        curBranch=curTrunk.slice();
                     }
                     curTrunk=getTXHash(returnedTrytes.slice(0,2673));
@@ -803,7 +823,7 @@ var doPoW=function(trytes,trunkTransaction,branchTransaction,minWeightMagnitude)
     }
     loop();
   });
-}
+};
 /******** NET FUNCTIONS ********/
 
 var storeTransactions = function(node,trytes){
@@ -818,7 +838,7 @@ var storeTransactions = function(node,trytes){
             command: "storeTransactions",
             trytes: data}));
     });
-}
+};
 
 var attachToTangle = function(node,trunkTransaction,branchTransaction,minWeightMagnitude,trytes){
     return new Promise((resolve, reject) => {
@@ -835,7 +855,7 @@ var attachToTangle = function(node,trunkTransaction,branchTransaction,minWeightM
             minWeightMagnitude: minWeightMagnitude,
             trytes: data}));      
     });
-}
+};
 
 var broadcastTransactions = function(node,trytes){
     return new Promise((resolve, reject) => {
@@ -849,7 +869,7 @@ var broadcastTransactions = function(node,trytes){
             command: "broadcastTransactions",
             trytes: data}));      
     });
-}
+};
 
 var getTransactionsToApprove = function(node,depth,reference){
     return new Promise((resolve, reject) => {
@@ -857,13 +877,13 @@ var getTransactionsToApprove = function(node,depth,reference){
             command: "getTransactionsToApprove",
             depth: depth};
         if(reference){
-            if(reference.length==81){
+            if(reference.length===81){
                 payload.reference=reference;
             }
         }
         resolve(performHttp(node,payload));      
     });
-}
+};
 
 var getNodeInfo = function(node){
     return new Promise((resolve, reject) => {
@@ -871,7 +891,7 @@ var getNodeInfo = function(node){
             command: "getNodeInfo"};
         resolve(performHttp(node,payload));      
     });
-}
+};
 
 var storeAndBroadcast = function(node,trytes){
     return new Promise((resolve, reject) => {
@@ -884,9 +904,38 @@ var storeAndBroadcast = function(node,trytes){
         storeTransactions(node,data)
         .then(function(){
               resolve(broadcastTransactions(node,data));      
-        })
+        });
     });
-}
+};
+
+var getBalances = function(node,addresses){
+    return new Promise((resolve, reject) => {
+        var data=[];
+        if(!inputValidator.isArray(addresses)){
+            data.push(addresses);
+        } else {
+            data=addresses;
+        }
+        resolve(performHttp(node,{
+            command: "getBalances",
+            addresses: data,
+            threshold:  100})); 
+    });
+};
+
+var wereAddressesSpentFrom = function(node,addresses){
+    return new Promise((resolve, reject) => {
+        var data=[];
+        if(!inputValidator.isArray(addresses)){
+            data.push(addresses);
+        } else {
+            data=addresses;
+        }
+        resolve(performHttp(node,{
+            command: "wereAddressesSpentFrom",
+            addresses: data})); 
+    });
+};
 
 var connectHttp=function(node){
     var tmp=[];
@@ -897,11 +946,11 @@ var connectHttp=function(node){
     } else {
         tmp=node.split(":");
     }
-    var target=require(tmp[0]=='https'?'https':'http');
+    var target=require(tmp[0]==='https'?'https':'http');
     target.globalAgent.keepAlive = true;
     target.globalAgent.options.keepAlive = true;
     return target;
-}
+};
 
 var performHttp = function(node,payload){
     return new Promise((resolve, reject) => {
@@ -915,7 +964,7 @@ var performHttp = function(node,payload){
             tmp=node.split(":");
         }  
         if(!node.con){
-            var con=require(tmp[0]=='https'?'https':'http');
+            var con=require(tmp[0]==='https'?'https':'http');
         } else {
             var con=node.con;
         }
@@ -926,7 +975,7 @@ var performHttp = function(node,payload){
           method: 'POST',
           headers: {
               'Content-Type': 'application/json',
-              'X-IOTA-API-Version': '1',
+              'X-IOTA-API-Version': '1'
           }
         };
         var req = con.request(options, function(res) {
@@ -957,14 +1006,25 @@ var performHttp = function(node,payload){
         req.write(JSON.stringify(payload));
         req.end();
     });
-}
+};
 
 /******** HELPER FUNCTIONS ********/
+function padArray(array, length, fill) {
+       return length > array.length ? array.concat(Array(length - array.length).fill(fill)) : array; 
+}
+function mergeTypedArrays(a, b) {
+    if(!b || b.length === 0) return a;
+    if(!a || a.length === 0) return b;
+    var c = new a.constructor(a.length + b.length);
+    c.set(a);
+    c.set(b, a.length);
+    return c;
+}
 function trimChar(string, charToRemove) {
-    while(string.charAt(0)==charToRemove) {
+    while(string.charAt(0)===charToRemove) {
         string = string.substring(1);
     }
-    while(string.charAt(string.length-1)==charToRemove) {
+    while(string.charAt(string.length-1)===charToRemove) {
         string = string.substring(0,string.length-1);
     }
     return string;
@@ -988,8 +1048,6 @@ function getAverage(val){
     }
     return Math.round(sum/val.length);
 }
-
-
 
 function normalizedBundleFromTrits(bundleHashTrits,seclevel) {
     var normalizedBundle = [];
@@ -1040,5 +1098,8 @@ module.exports = {
     storeAndBroadcast:storeAndBroadcast,
     attachToTangle:attachToTangle,
     getTransactionsToApprove:getTransactionsToApprove,
-    getNodeInfo:getNodeInfo
-}
+    getBalances:getBalances,
+    wereAddressesSpentFrom:wereAddressesSpentFrom,
+    getNodeInfo:getNodeInfo,
+    convertTransferAddress:convertTransferAddress
+};
