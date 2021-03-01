@@ -24,7 +24,7 @@
  */
 
 const iotakeccak = require('../iota.keccak.js');
-const node={url:"https://nodes.example.com:443"};
+const node={url:"https://node.example.com:443"};
 const spam=[{address:"IOTA9KECCAK9JS9SPAMMER",
             message:"IOTA9KECCAK9JS9SPAMMER",
             tag:"IOTA9KECCAK9JS9SPAMMER"}];
@@ -35,7 +35,7 @@ var lastCounter=0;
 var lastTimestamp=new Date();
 var scriptStart=new Date();
 
-if(node.url=="https://nodes.example.com:443" && !config.benchmark){
+if(node.url=="https://node.example.com:443" && !config.benchmark){
     console.log("!!! Please set a proper node !!!");
     process.exit(0);
 }

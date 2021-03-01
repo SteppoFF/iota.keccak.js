@@ -1,16 +1,21 @@
 const iotakeccak = require('../iota.keccak.js');
-var node={url:"https://nodes.iota.fm:443"};
-var pownode={url:"https://api.powsrv.io:443"};
-var spam=[{address:"IOTA9KECCAK9JS9SPAMMER",
+const node={url:"https://node.example.com:443"};
+const pownode={url:"https://powNode.example.com:443"};
+const spam=[{address:"IOTA9KECCAK9JS9SPAMMER",
             message:"IOTA9KECCAK9JS9SPAMMER",
             tag:"IOTA9KECCAK9JS9SPAMMER"}];  
 
 /*
  * use this config to create a free running spammer
- * var config={loop:true,sleeptime:2000,silent:true};
+ * const config={loop:true,sleeptime:2000,silent:true};
  */
-var config={loop:false,sleeptime:2000,silent:false};
+const config={loop:false,sleeptime:2000,silent:false};
 createSpam(spam,node,pownode);
+
+if(node.url=="https://node.example.com:443" || node.url=="https://powNode.example.com:443"){
+    console.log("!!! Please set proper nodes !!!");
+    process.exit(0);
+}
 
 
 function createSpam(spam,node,pownode){
