@@ -88,7 +88,7 @@ iotakeccak.createBundleKeccak(spam,{skipInputValidation:true,ignoreValue:false,q
 	console.log(result);
 });
 ```
-For more examples check the [expamples folder](https://github.com/SteppoFF/iota.keccak.js/tree/master/examples).
+For more examples check the [examples folder](https://github.com/SteppoFF/iota.keccak.js/tree/master/examples).
 You will find several examples there how to use this module.
 
 ## Benchmark for address creation and signing
